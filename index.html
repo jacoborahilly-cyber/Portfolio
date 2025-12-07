@@ -5,8 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Interactive Canvas Portfolio</title>
     <style>
-        /* CSS from previous steps (omitted for brevity) */
-        body { overflow: hidden; margin: 0; padding: 0; background-color: #121212; font-family: Arial, sans-serif; color: #E0E0E0; }
+        /* CSS from previous steps */
+        body { 
+            overflow: hidden; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #121212; 
+            font-family: Arial, sans-serif; 
+            color: #E0E0E0;
+        }
+
         #world { 
             position: absolute; 
             width: 5000px;      
@@ -18,15 +26,17 @@
                 repeating-linear-gradient(-90deg, #333 0, #333 1px, transparent 1px, transparent 100px);
             background-size: 100px 100px;
         }
+        
         .content-area, .room-content { 
             position: absolute; 
             width: 1000px;
             min-height: 700px;
             padding: 30px; 
             border-radius: 12px; 
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); 
             color: #121212;
         }
+        
         /* Room Styles */
         #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; }
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
@@ -50,9 +60,10 @@
             opacity: 1;
             transition: opacity 0.5s ease-out;
         }
+
         .hidden { opacity: 0 !important; pointer-events: none; }
 
-        /* --- UPDATED: Indicator CSS for clear arrow --- */
+        /* --- Indicator CSS (Re-added) --- */
         .indicator {
             position: fixed;
             width: 40px;
@@ -68,15 +79,12 @@
             font-size: 1.5em;
             color: white;
             line-height: 0; /* Ensures the triangle sits in the middle */
-            padding-top: 5px; /* Adjust triangle position */
-            /* Positioning is controlled by JS, these are safe defaults */
-            top: 50%;
-            left: 50%;
+            padding-top: 5px; 
         }
         .indicator.on-screen { opacity: 0; top: -100px; }
         .indicator.off-screen { opacity: 1; }
 
-        /* Indicator Colors (unchanged) */
+        /* Indicator Colors */
         #indicator-design { background-color: #FF5A5F; }
         #indicator-code { background-color: #1ABC9C; }
         #indicator-about { background-color: #F39C12; }
@@ -87,33 +95,57 @@
     <div id="instruction-popup">
         Use **WASD** or **Arrow Keys** to explore the portfolio!
     </div>
-
+    
     <div id="indicator-design" class="indicator on-screen"></div>
     <div id="indicator-code" class="indicator on-screen"></div>
     <div id="indicator-about" class="indicator on-screen"></div>
-    
+
     <div id="world">
-        <section id="Room-Design" class="room-content" data-target-x="500" data-target-y="500"><h2>🎨 Design Room</h2><h3>Creative Design Showcase</h3><p>Coordinates: (500px, 500px)</p></section>
-        <section id="Room-Code" class="room-content" data-target-x="3500" data-target-y="3500"><h2>💻 Code Room</h2><h3>Technical Projects</h3><p>Coordinates: (3500px, 3500px)</p><ul><li>**GitHub API Fetcher:**...</li></ul></section>
-        <section id="Room-About" class="room-content" data-target-x="500" data-target-y="2500"><h2>👤 About Room</h2><p>Coordinates: (2500px, 500px) - NOTE: This room's Y is 2500px, X is 500px</p></section>
+        <section id="Room-Design" class="room-content" data-target-x="500" data-target-y="500">
+            <h2>🎨 Design Room</h2>
+            <p>This space is dedicated to my **UX/UI case studies**...</p>
+            <h3>Creative Design Showcase</h3>
+            <div class="project-placeholder">Project 1 Placeholder (600px x 400px)</div>
+            <div class="project-placeholder">Project 2 Placeholder (600px x 400px)</div>
+            <div style="clear: both;"></div>
+            <p>Coordinates: (500px, 500px)</p>
+        </section>
+
+        <section id="Room-Code" class="room-content" data-target-x="3500" data-target-y="3500">
+            <h2>💻 Code Room</h2>
+            <p>Here you can find my **front-end development** projects...</p>
+            <h3>Technical Projects</h3>
+            <ul>
+                <li>**GitHub API Fetcher:**...</li>
+                <li>**Interactive Data Visualization:**...</li>
+                <li>**AI-Generated Art Tool:**...</li>
+            </ul>
+            <p>Coordinates: (3500px, 3500px)</p>
+        </section>
+
+        <section id="Room-About" class="room-content" data-target-x="500" data-target-y="2500"><h2>👤 About Room</h2><p>Learn more about **who I am**...</p><p>Coordinates: (2500px, 500px) - NOTE: This room's Y is 2500px, X is 500px</p></section>
+
+        <div id="spawn-center" style="position: absolute; top: 2500px; left: 2500px; width: 1px; height: 1px;"></div>
     </div>
 
     <script>
         const world = document.getElementById('world');
         const instructionPopup = document.getElementById('instruction-popup');
         
-        // Target/Current/Velocity for Simple Easing
+        // World Dimensions (5000px x 5000px)
+        const WORLD_SIZE = 5000;
+        const HALF_WORLD = WORLD_SIZE / 2;
+
+        // Target/Current positions
         let targetX = 0;
         let targetY = 0;
         let currentX = 0;
         let currentY = 0;
         
-        // Removed velocityX/Y and spring constants (stiffness/damping)
-
-        // --- NEW SIMPLE EASING CONSTANT ---
-        const easing = 0.08; // How quickly the current position catches up to the target (0.08 = 8% per frame)
+        // --- MOVEMENT CONSTANTS (Simple Easing, No Bounce) ---
+        const easing = 0.08; 
         
-        // --- ACCELERATION VARIABLES ---
+        // Acceleration Variables (for exponential speed)
         const baseSpeed = 0.5;      
         const maxSpeed = 15;        
         const accelerationRate = 1.05; 
@@ -122,11 +154,31 @@
         // Key movement variables
         const keyMap = {}; 
         
+        // Room Data (Re-added for indicator logic)
         const rooms = [
             { id: 'Room-Design', element: document.getElementById('Room-Design'), indicator: document.getElementById('indicator-design'), center: { x: 500 + 500, y: 500 + 350 } },
             { id: 'Room-Code', element: document.getElementById('Room-Code'), indicator: document.getElementById('indicator-code'), center: { x: 3500 + 500, y: 3500 + 350 } },
             { id: 'Room-About', element: document.getElementById('Room-About'), indicator: document.getElementById('indicator-about'), center: { x: 500 + 500, y: 2500 + 350 } }
         ];
+
+        // --- NEW: Initialization Function to Center the View ---
+        function initializePosition() {
+            // Get the center of the viewport
+            const viewportCenterX = window.innerWidth / 2;
+            const viewportCenterY = window.innerHeight / 2;
+            
+            // The world's absolute center is at (2500, 2500)
+            // To make the world's center appear in the viewport's center, 
+            // the world must be translated by (ViewportCenter - WorldCenter).
+            
+            // We want the viewport to be looking at (2500, 2500).
+            // Since the canvas moves opposite to the user, the final translation should be:
+            currentX = targetX = viewportCenterX - HALF_WORLD;
+            currentY = targetY = viewportCenterY - HALF_WORLD;
+            
+            // Apply initial transform immediately
+            world.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        }
 
         // --- Keyboard Event Listeners (Unchanged) ---
         const movementKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
@@ -157,7 +209,7 @@
         }
         setTimeout(hideInstructions, 4000); 
 
-        // --- Indicator Update Function (Unchanged) ---
+        // --- Indicator Update Function (Restored) ---
         function updateIndicators() {
             const viewportW = window.innerWidth;
             const viewportH = window.innerHeight;
@@ -169,9 +221,9 @@
                 const roomScreenX = currentX + room.center.x;
                 const roomScreenY = currentY + room.center.y;
                 
+                // Simple visibility check
                 const isVisibleX = roomScreenX > -(1000) && roomScreenX < viewportW + (1000);
                 const isVisibleY = roomScreenY > -(700) && roomScreenY < viewportH + (700);
-                
                 const isVisible = isVisibleX && isVisibleY;
                 
                 if (isVisible) {
@@ -195,7 +247,6 @@
                     room.indicator.style.left = `${ix - indicatorSize / 2}px`;
                     room.indicator.style.top = `${iy - indicatorSize / 2}px`;
                     
-                    // The triangle character is rotated to point towards the target
                     room.indicator.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
                     room.indicator.textContent = '▲'; 
                 }
@@ -203,34 +254,29 @@
         }
 
 
-        // --- 5. Animation Loop (New Deceleration Logic) ---
+        // --- Animation Loop (Linear Easing) ---
         function animate() {
-            let isMoving = false;
-
-            // 1. Check movement and apply Acceleration to Target Position
+            // 1. Acceleration
             if (Object.values(keyMap).some(v => v === true)) {
-                isMoving = true;
                 currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
             } else {
                 currentSpeed = baseSpeed; 
             }
 
-            // Apply movement to the TARGET (where we want to go)
+            // 2. Apply movement to the TARGET
             if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
             if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
             if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
             if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
             
-            // 2. Linear Easing (Smooth Slide, No Bounce)
-            // Calculate the difference between the target and the current position
+            // 3. Simple Easing (Deceleration)
             const dx = targetX - currentX;
             const dy = targetY - currentY;
             
-            // Move the current position a fraction of the distance (8%) towards the target
             currentX += dx * easing;
             currentY += dy * easing;
 
-            // 3. Apply the new position
+            // 4. Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
             updateIndicators(); 
@@ -238,8 +284,9 @@
             window.requestAnimationFrame(animate);
         }
 
-        // Start the animation loop
-        animate();
+        // --- Start Execution ---
+        window.onload = initializePosition; // Center the view when the window loads
+        animate(); // Start the animation loop
     </script>
     
 </body>

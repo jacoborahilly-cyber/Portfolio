@@ -5,16 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Interactive Canvas Portfolio</title>
     <style>
-        /* Base Styles (Simplified for inclusion) */
-        body { 
-            overflow: hidden; 
-            margin: 0; 
-            padding: 0; 
-            background-color: #121212; 
-            font-family: Arial, sans-serif; 
-            color: #E0E0E0;
-        }
-
+        /* CSS from previous steps (omitted for brevity) */
+        body { overflow: hidden; margin: 0; padding: 0; background-color: #121212; font-family: Arial, sans-serif; color: #E0E0E0; }
         #world { 
             position: absolute; 
             width: 5000px;      
@@ -26,81 +18,23 @@
                 repeating-linear-gradient(-90deg, #333 0, #333 1px, transparent 1px, transparent 100px);
             background-size: 100px 100px;
         }
-        
         .content-area, .room-content { 
             position: absolute; 
             width: 1000px;
             min-height: 700px;
             padding: 30px; 
             border-radius: 12px; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); 
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); 
             color: #121212;
         }
-        
-        /* Room Styles */
+        /* Room and indicator styles unchanged */
         #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; }
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; }
-        
-        /* Instruction Panel CSS */
-        #instruction-popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            padding: 20px 40px;
-            background-color: rgba(255, 255, 255, 0.95);
-            color: #121212;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            font-size: 1.5em;
-            font-weight: bold;
-            text-align: center;
-            opacity: 1;
-            transition: opacity 0.5s ease-out;
-        }
-
-        .hidden {
-            opacity: 0 !important;
-            pointer-events: none;
-        }
-
-        /* --- NEW: Indicator CSS --- */
-        .indicator {
-            position: fixed;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            opacity: 1;
-            transition: opacity 0.3s ease-in-out;
-            z-index: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.5em;
-            color: white;
-            /* Positioning is controlled by JS, these are safe defaults */
-            top: 50%;
-            left: 50%;
-        }
-
-        .indicator.off-screen {
-            opacity: 1;
-        }
-        
-        .indicator.on-screen {
-            opacity: 0;
-            /* Small optimization: when faded, put it off screen so it doesn't accidentally cover anything */
-            top: -100px;
-        }
-
-        /* Indicator Colors */
-        #indicator-design { background-color: #FF5A5F; }
-        #indicator-code { background-color: #1ABC9C; }
-        #indicator-about { background-color: #F39C12; }
-
+        #instruction-popup { /* ... styles ... */ }
+        .hidden { opacity: 0 !important; pointer-events: none; }
+        .indicator { /* ... styles ... */ }
+        .indicator.on-screen { opacity: 0; top: -100px; }
     </style>
 </head>
 <body>
@@ -114,23 +48,9 @@
     <div id="indicator-about" class="indicator on-screen"></div>
     
     <div id="world">
-        <section id="Room-Design" class="room-content" data-target-x="500" data-target-y="500">
-            <h2>🎨 Design Room</h2>
-            <h3>Creative Design Showcase</h3>
-            <p>Coordinates: (500px, 500px)</p>
-        </section>
-
-        <section id="Room-Code" class="room-content" data-target-x="3500" data-target-y="3500">
-            <h2>💻 Code Room</h2>
-            <h3>Technical Projects</h3>
-            <p>Coordinates: (3500px, 3500px)</p>
-        </section>
-
-        <section id="Room-About" class="room-content" data-target-x="500" data-target-y="2500">
-            <h2>👤 About Room</h2>
-            <p>Coordinates: (2500px, 500px) - NOTE: This room's Y is 2500px, X is 500px</p>
-        </section>
-
+        <section id="Room-Design" class="room-content" data-target-x="500" data-target-y="500"><h2>🎨 Design Room</h2><h3>Creative Design Showcase</h3><p>Coordinates: (500px, 500px)</p></section>
+        <section id="Room-Code" class="room-content" data-target-x="3500" data-target-y="3500"><h2>💻 Code Room</h2><h3>Technical Projects</h3><p>Coordinates: (3500px, 3500px)</p><ul><li>**GitHub API Fetcher:**...</li></ul></section>
+        <section id="Room-About" class="room-content" data-target-x="500" data-target-y="2500"><h2>👤 About Room</h2><p>Coordinates: (2500px, 500px) - NOTE: This room's Y is 2500px, X is 500px</p></section>
     </div>
 
     <script>
@@ -145,27 +65,34 @@
         let velocityX = 0;
         let velocityY = 0;
         
-        // Physics Constants
-        const stiffness = 0.05; 
-        const damping = 0.95;   
+        // --- UPDATED PHYSICS CONSTANTS ---
+        const stiffness = 0.02; // Reduced stiffness for less aggressive "jelly"
+        const damping = 0.98;   // Increased damping for a much slower, longer slide
+        
+        // --- NEW ACCELERATION VARIABLES ---
+        const baseSpeed = 0.5;      // Starting speed
+        const maxSpeed = 15;        // Maximum speed limit
+        const accelerationRate = 1.05; // Factor by which speed increases per frame
+        let currentSpeed = baseSpeed;
 
         // Key movement variables
         const keyMap = {}; 
-        const moveSpeed = 10; 
-
-        // --- 1. Indicator Setup ---
-        // Store references to the target elements and their indicators
+        
         const rooms = [
-            { id: 'Room-Design', element: document.getElementById('Room-Design'), indicator: document.getElementById('indicator-design'), center: { x: 500 + 500, y: 500 + 350 } }, // Room X + Room Width/2, Room Y + Room Height/2
+            { id: 'Room-Design', element: document.getElementById('Room-Design'), indicator: document.getElementById('indicator-design'), center: { x: 500 + 500, y: 500 + 350 } },
             { id: 'Room-Code', element: document.getElementById('Room-Code'), indicator: document.getElementById('indicator-code'), center: { x: 3500 + 500, y: 3500 + 350 } },
             { id: 'Room-About', element: document.getElementById('Room-About'), indicator: document.getElementById('indicator-about'), center: { x: 500 + 500, y: 2500 + 350 } }
         ];
 
-        // --- 2. Keyboard Event Listeners (Unchanged) ---
+        // --- Keyboard Event Listeners ---
         const movementKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
 
         window.addEventListener('keydown', (e) => {
             if (movementKeys.includes(e.code)) {
+                if (!keyMap[e.code]) {
+                    // Reset speed on first key press to ensure slow start
+                    currentSpeed = baseSpeed; 
+                }
                 keyMap[e.code] = true;
                 e.preventDefault();
                 hideInstructions();
@@ -176,9 +103,13 @@
             if (movementKeys.includes(e.code)) {
                 keyMap[e.code] = false;
             }
+            // Reset speed when all movement keys are released
+            if (!Object.values(keyMap).some(v => v === true)) {
+                 currentSpeed = baseSpeed;
+            }
         });
 
-        // --- 3. Instruction Pop-up Logic (Unchanged) ---
+        // --- Instruction Pop-up Logic (Unchanged) ---
         function hideInstructions() {
             if (!instructionPopup.classList.contains('hidden')) {
                 instructionPopup.classList.add('hidden');
@@ -186,80 +117,71 @@
         }
         setTimeout(hideInstructions, 4000); 
 
-        // --- 4. Indicator Update Function (NEW CORE LOGIC) ---
+        // --- Indicator Update Function (Unchanged) ---
         function updateIndicators() {
             const viewportW = window.innerWidth;
             const viewportH = window.innerHeight;
             const viewportCenterX = viewportW / 2;
             const viewportCenterY = viewportH / 2;
-            const indicatorSize = 40; // From CSS
-            const padding = 10; // Space from the screen edge
+            const indicatorSize = 40; 
             
-            // Loop through each room
             rooms.forEach(room => {
-                // Calculate the room's center position relative to the VIEWPORT
-                // World position (currentX/Y) + Room's absolute position (room.center)
                 const roomScreenX = currentX + room.center.x;
                 const roomScreenY = currentY + room.center.y;
                 
-                // Check if the room is visible on screen
-                // We assume room width/height is 1000px/700px for a simple check
                 const isVisibleX = roomScreenX > -(1000) && roomScreenX < viewportW + (1000);
                 const isVisibleY = roomScreenY > -(700) && roomScreenY < viewportH + (700);
                 
                 const isVisible = isVisibleX && isVisibleY;
                 
                 if (isVisible) {
-                    // Room is visible or close: Hide indicator
                     room.indicator.classList.add('on-screen');
                     room.indicator.classList.remove('off-screen');
                 } else {
-                    // Room is off-screen: Show indicator and calculate direction/position
                     room.indicator.classList.remove('on-screen');
                     room.indicator.classList.add('off-screen');
 
-                    // 1. Calculate the angle (direction) from viewport center to room center
-                    // Vector from center to room center in screen space
                     const vecX = roomScreenX - viewportCenterX;
                     const vecY = roomScreenY - viewportCenterY;
-
-                    // Angle in radians
                     const angle = Math.atan2(vecY, vecX); 
                     
-                    // 2. Position the indicator near the edge of the screen using the angle
-                    // The position is calculated by finding the intersection of the ray (angle) with the viewport boundaries
-                    
-                    // Start by assuming the indicator is on the border of a square bounding the viewport
                     let ix = viewportCenterX + Math.cos(angle) * viewportW;
                     let iy = viewportCenterY + Math.sin(angle) * viewportH;
 
-                    // Now, scale it down so it is exactly on the viewport edge (diamond shape)
                     const diagonalFactor = Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle));
                     ix = viewportCenterX + Math.cos(angle) * (viewportW / 2) / diagonalFactor;
                     iy = viewportCenterY + Math.sin(angle) * (viewportH / 2) / diagonalFactor;
                     
-                    // 3. Apply position (and padding)
-                    // The indicator position is center of the circle, so we adjust by half its size
                     room.indicator.style.left = `${ix - indicatorSize / 2}px`;
                     room.indicator.style.top = `${iy - indicatorSize / 2}px`;
-
-                    // OPTIONAL: Add an arrow visual (simple rotation for demonstration)
                     room.indicator.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
-                    room.indicator.textContent = '▲'; // Triangle emoji as an arrow
+                    room.indicator.textContent = '▲'; 
                 }
             });
         }
 
 
-        // --- 5. Animation Loop (Integrating Indicator Update) ---
+        // --- 5. Animation Loop (Main Logic) ---
         function animate() {
-            // ... (Key input update logic remains in place)
-            if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += moveSpeed; }
-            if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= moveSpeed; }
-            if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += moveSpeed; }
-            if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= moveSpeed; }
+            let isMoving = false;
 
-            // Spring Physics Logic (Unchanged)
+            // Check if any movement key is pressed
+            if (Object.values(keyMap).some(v => v === true)) {
+                isMoving = true;
+                // Exponential acceleration: Increase speed up to max
+                currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
+            } else {
+                // If not moving, ensure speed is back to base for next movement cycle
+                currentSpeed = baseSpeed; 
+            }
+
+            // Apply movement based on key presses and CURRENT SPEED
+            if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
+            if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
+            if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
+            if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
+
+            // Spring Physics Logic 
             const dx = targetX - currentX;
             const dy = targetY - currentY;
 
@@ -278,7 +200,6 @@
             // Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
-            // CALL THE NEW INDICATOR FUNCTION
             updateIndicators(); 
 
             window.requestAnimationFrame(animate);

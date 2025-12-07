@@ -13,7 +13,6 @@
             background-color: #121212; 
             font-family: Arial, sans-serif; 
             color: #E0E0E0;
-            /* FIX: Removed cursor: none; to make the default cursor visible for clicking nodes */
         }
 
         #world { 
@@ -56,7 +55,7 @@
             border-radius: 50%;
             background-color: white; 
             z-index: 1000;
-            /* pointer-events: none; is removed to allow the default cursor to interact */
+            pointer-events: none; /* Must be transparent to clicks */
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
         }
 
@@ -75,7 +74,7 @@
             opacity: 0; 
         }
 
-        /* Reset Instructions in Bottom Left (unchanged) */
+        /* Reset Instructions in Bottom Left (updated) */
         #reset-guide {
             position: fixed;
             bottom: 20px;
@@ -151,26 +150,8 @@
         <div id="spawn-center" style="position: absolute; top: 2500px; left: 2500px; width: 1px; height: 1px;"></div>
     </div>
     
-    <template id="room-design-template">
-        <h2>🎨 Design Room</h2>
-        <p>This space is dedicated to my **UX/UI case studies**...</p>
-        <h3>Creative Design Showcase</h3>
-        <div class="project-placeholder">Project 1 Placeholder (600px x 400px)</div>
-        <div class="project-placeholder">Project 2 Placeholder (600px x 400px)</div>
-        <div style="clear: both;"></div>
-        <p>Coordinates: (500px, 500px)</p>
-    </template>
-    <template id="room-code-template">
-        <h2>💻 Code Room</h2>
-        <p>Here you can find my **front-end development** projects...</p>
-        <h3>Technical Projects</h3>
-        <ul>
-            <li>**GitHub API Fetcher:**...</li>
-            <li>**Interactive Data Visualization:**...</li>
-            <li>**AI-Generated Art Tool:**...</li>
-        </ul>
-        <p>Coordinates: (3500px, 3500px)</p>
-    </template>
+    <template id="room-design-template">...</template>
+    <template id="room-code-template">...</template>
     <template id="room-about-template">
         <h2>👤 About Room</h2>
         <p>Learn more about **who I am**...</p>
@@ -192,7 +173,7 @@
         let pathActive = false;
         let currentPath = [];
         let pathIndex = 0;
-        const pathTolerance = 50; 
+        const pathTolerance = 100; // Increased tolerance to make alignment easier
 
         // Target/Current positions
         let targetX = 0;
@@ -202,9 +183,8 @@
         
         // MOVEMENT CONSTANTS
         const easing = 0.08;
-        const guidedEasing = 0.05;
         
-        // Acceleration Variables (for exponential speed, used when free-roaming)
+        // Acceleration Variables (for exponential speed)
         const baseSpeed = 0.5;      
         const maxSpeed = 15;        
         const accelerationRate = 1.05; 
@@ -242,26 +222,21 @@
             pathNodes.forEach(node => node.classList.add('nodes-hidden'));
             navArrow.style.opacity = 1;
 
-            // Immediately set the first target and start movement
-            setNextTarget(); 
-            resetGuide.textContent = "Press E to reset path";
+            // FIX: Set the target coordinate for the current step
+            // We DON'T move the canvas here, just set the guide's target
+            setTargetCoordinate(currentPath[pathIndex]); 
+
+            resetGuide.textContent = "Align white circle with arrow to advance (Press E to reset)";
         }
 
-        function setNextTarget() {
-            if (pathIndex < currentPath.length) {
-                const nextStep = currentPath[pathIndex];
-                
-                const viewportCenterX = window.innerWidth / 2;
-                const viewportCenterY = window.innerHeight / 2;
+        // Calculates and sets the target coordinates in WORLD space for the current path step
+        function setTargetCoordinate(coordinate) {
+            const viewportCenterX = window.innerWidth / 2;
+            const viewportCenterY = window.innerHeight / 2;
 
-                // Set target translation to center the next step
-                targetX = viewportCenterX - nextStep.x;
-                targetY = viewportCenterY - nextStep.y;
-
-            } else {
-                // Path finished
-                resetPath();
-            }
+            // This is the ideal translation needed to center the coordinate (x, y)
+            targetX = viewportCenterX - coordinate.x;
+            targetY = viewportCenterY - coordinate.y;
         }
         
         function resetPath() {
@@ -275,9 +250,7 @@
             
             // Re-center the world when resetting the path
             initializePosition();
-
-            // FIX: Ensure target and current are aligned for a smooth restart
-            targetX = currentX;
+            targetX = currentX; // Stop any residual easing movement
             targetY = currentY;
 
             resetGuide.textContent = "Press E to reset path / Use WASD to explore";
@@ -303,18 +276,14 @@
             }
         });
 
-        // WASD Key Down Listener (Controls acceleration in free-roam)
+        // WASD Key Down Listener (Controls acceleration)
         window.addEventListener('keydown', (e) => {
             if (movementKeys.includes(e.code)) {
-                if (pathActive) {
-                    e.preventDefault(); 
-                } else {
-                    // FREE ROAM LOGIC
-                    if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
-                    keyMap[e.code] = true;
-                    e.preventDefault();
-                    hideInstructions(500); 
-                }
+                // Acceleration logic applies in BOTH free roam and guided mode
+                if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
+                keyMap[e.code] = true;
+                e.preventDefault();
+                hideInstructions(500); 
             }
         });
 
@@ -323,7 +292,6 @@
             if (movementKeys.includes(e.code)) {
                 keyMap[e.code] = false;
             }
-            // FIX: Reset speed only if *all* movement keys are released
             if (!Object.values(keyMap).some(v => v === true)) { 
                 currentSpeed = baseSpeed;
             }
@@ -331,9 +299,8 @@
 
         // --- Initialization and Utility ---
 
-        // Function to calculate and position nodes in a circle
         function positionNodesInCircle() {
-            const radius = 200; // Distance from center in pixels
+            const radius = 200; 
             const centerX = window.innerWidth / 2;
             const centerY = window.innerHeight / 2;
             const nodeDiameter = 70; 
@@ -344,29 +311,24 @@
                 const x = centerX + radius * Math.cos(angle);
                 const y = centerY + radius * Math.sin(angle);
 
-                // Set CSS position, adjusting for the node's own size (70px)
                 node.style.left = `${x - nodeDiameter / 2}px`;
                 node.style.top = `${y - nodeDiameter / 2}px`;
 
-                // Set node transform separately for hover effect
                 node.style.transform = `translate(-50%, -50%)`;
             });
         }
 
         function initializePosition() {
             loadRoomTemplates();
-            // 1. Center the view
+            
             const viewportCenterX = window.innerWidth / 2;
             const viewportCenterY = window.innerHeight / 2;
             currentX = targetX = viewportCenterX - HALF_WORLD;
             currentY = targetY = viewportCenterY - HALF_WORLD;
             world.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
 
-            // 2. Position the selection nodes
             positionNodesInCircle(); 
-
-            // Add resize listener to reposition nodes if viewport changes
-            window.addEventListener('resize', positionNodesInCircle);
+            window.addEventListener('resize', initializePosition); // Re-center and reposition nodes on resize
         }
 
         function hideInstructions(delay = 4000) {
@@ -383,67 +345,65 @@
                 return;
             }
 
-            const currentTarget = currentPath[pathIndex];
+            const currentTargetCoord = currentPath[pathIndex];
             
-            const targetScreenX = currentX + currentTarget.x;
-            const targetScreenY = currentY + currentTarget.y;
+            // Calculate the current SCREEN position of the next path coordinate
+            const targetScreenX = currentX + currentTargetCoord.x;
+            const targetScreenY = currentY + currentTargetCoord.y;
             
             const viewportCenterX = window.innerWidth / 2;
             const viewportCenterY = window.innerHeight / 2;
 
+            // Vector from viewport center (white circle) to target
             const vecX = targetScreenX - viewportCenterX;
             const vecY = targetScreenY - viewportCenterY;
             
             const distance = Math.sqrt(vecX * vecX + vecY * vecY);
             
             if (distance < pathTolerance) {
-                // Advance to next step
+                // If close to center, advance to next step
                 pathIndex++;
-                setNextTarget();
-                return;
+                if (pathIndex < currentPath.length) {
+                    setTargetCoordinate(currentPath[pathIndex]);
+                } else {
+                    resetPath();
+                    return;
+                }
             }
 
-            // Calculate rotation angle
+            // Calculate rotation angle and distance to place the arrow guide
             const angle = Math.atan2(vecY, vecX); 
-            navArrow.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
+            
+            // Rotate the arrow icon to point toward the target
+            navArrow.style.transform = `rotate(${angle + Math.PI / 2}rad) translate(0, -50px)`;
+            navArrow.style.opacity = 1;
         }
 
         // --- Animation Loop ---
         function animate() {
-            let dx, dy;
-
-            if (pathActive) {
-                // GUIDED PATH MOVEMENT (Uses guidedEasing)
-                dx = targetX - currentX;
-                dy = targetY - currentY;
-                currentX += dx * guidedEasing;
-                currentY += dy * guidedEasing;
-
+            // 1. Update target based on WASD keys (free roam & guided)
+            if (Object.values(keyMap).some(v => v === true)) {
+                currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
             } else {
-                // FREE ROAM MOVEMENT (WASD)
-                if (Object.values(keyMap).some(v => v === true)) {
-                    currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
-                } else {
-                    currentSpeed = baseSpeed; 
-                }
-                
-                // Update target based on held keys
-                if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
-                if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
-                if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
-                if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
-                
-                // Apply easing
-                dx = targetX - currentX;
-                dy = targetY - currentY;
-                currentX += dx * easing;
-                currentY += dy * easing;
+                currentSpeed = baseSpeed; 
             }
+            
+            if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
+            if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
+            if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
+            if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
+            
+            // 2. Apply Easing
+            const dx = targetX - currentX;
+            const dy = targetY - currentY;
+            
+            currentX += dx * easing;
+            currentY += dy * easing;
 
+            // 3. Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
             updateArrow();
-            // Note: Indicators are currently unnecessary in this design
 
             window.requestAnimationFrame(animate);
         }

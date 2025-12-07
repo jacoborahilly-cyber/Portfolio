@@ -43,8 +43,8 @@
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; }
         
-        /* --- Heart Cursor/Center Point (White circle) --- */
-        #heart-cursor {
+        /* --- NEW/UPDATED: Camera Reticle (Movable Target Center) --- */
+        #camera-reticle {
             position: fixed;
             top: 50%;
             left: 50%;
@@ -57,6 +57,8 @@
             z-index: 1000;
             pointer-events: none; /* Must be transparent to clicks */
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+            opacity: 0; /* Hidden initially, shown only when selecting a path */
+            transition: opacity 0.5s;
         }
 
         /* Navigational Arrow */
@@ -74,7 +76,7 @@
             opacity: 0; 
         }
 
-        /* Reset Instructions in Bottom Left (updated) */
+        /* Reset Instructions in Bottom Left (unchanged) */
         #reset-guide {
             position: fixed;
             bottom: 20px;
@@ -119,6 +121,17 @@
             opacity: 0 !important;
             pointer-events: none;
         }
+
+        /* --- NEW: Path Visual Block CSS --- */
+        .path-visual-block {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            z-index: 2; /* Below content, above grid */
+            opacity: 0.8;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -127,16 +140,16 @@
         Choose a **Node** to begin a guided path!
     </div>
     
-    <div id="heart-cursor"></div> 
+    <div id="camera-reticle"></div> 
     <div id="nav-arrow">▲</div>
     <div id="reset-guide">Press **E** to reset path / Use **WASD** to explore</div>
 
-    <div id="node-1" class="path-node" data-path="Design">1</div>
-    <div id="node-2" class="path-node" data-path="Code">2</div>
-    <div id="node-3" class="path-node" data-path="About">3</div>
-    <div id="node-4" class="path-node" data-path="Design">4</div>
-    <div id="node-5" class="path-node" data-path="Code">5</div>
-    <div id="node-6" class="path-node" data-path="About">6</div>
+    <div id="node-1" class="path-node" data-path="Design" data-color="#E74C3C">1</div>
+    <div id="node-2" class="path-node" data-path="Code" data-color="#3498DB">2</div>
+    <div id="node-3" class="path-node" data-path="About" data-color="#2ECC71">3</div>
+    <div id="node-4" class="path-node" data-path="Design" data-color="#F1C40F">4</div>
+    <div id="node-5" class="path-node" data-path="Code" data-color="#9B59B6">5</div>
+    <div id="node-6" class="path-node" data-path="About" data-color="#E67E22">6</div>
 
     <div id="indicator-design" class="indicator on-screen"></div>
     <div id="indicator-code" class="indicator on-screen"></div>
@@ -164,6 +177,7 @@
         const navArrow = document.getElementById('nav-arrow');
         const pathNodes = document.querySelectorAll('.path-node');
         const resetGuide = document.getElementById('reset-guide');
+        const cameraReticle = document.getElementById('camera-reticle'); // New reticle element
 
         // World Dimensions
         const WORLD_SIZE = 5000;
@@ -173,18 +187,20 @@
         let pathActive = false;
         let currentPath = [];
         let pathIndex = 0;
-        const pathTolerance = 100; // Increased tolerance to make alignment easier
+        const pathTolerance = 100; 
 
-        // Target/Current positions
-        let targetX = 0;
+        // Camera Position Variables
+        let targetX = 0; // Where the camera is being EASED to (controlled by WASD)
         let targetY = 0;
-        let currentX = 0;
+        let currentX = 0; // Current position of the camera
         let currentY = 0;
+        
+        // Path Target (The world coordinate the user needs to aim their reticle at)
+        let pathTargetWorldX = 0;
+        let pathTargetWorldY = 0;
         
         // MOVEMENT CONSTANTS
         const easing = 0.08;
-        
-        // Acceleration Variables (for exponential speed)
         const baseSpeed = 0.5;      
         const maxSpeed = 15;        
         const accelerationRate = 1.05; 
@@ -200,8 +216,50 @@
             { id: 'Room-About', element: document.getElementById('Room-About'), indicator: document.getElementById('indicator-about'), center: { x: 1000, y: 2850 } }
         ];
 
+        // Stores references to the path visual blocks
+        let pathVisuals = []; 
+
+        // --- NEW: Path Visualization Function ---
+        function createPathVisuals(nodeElement, steps, color) {
+            // Clean up old blocks
+            pathVisuals.forEach(el => el.remove());
+            pathVisuals = [];
+
+            if (!steps || steps.length === 0) return;
+
+            // Start position is the current camera center in world space
+            const worldCenterOffset = { x: HALF_WORLD, y: HALF_WORLD };
+            const startWorldX = worldCenterOffset.x;
+            const startWorldY = worldCenterOffset.y;
+            
+            // Initial vector direction from spawn (2500, 2500) to the first step
+            const startStep = steps[0];
+            const dx = startStep.x - startWorldX;
+            const dy = startStep.y - startWorldY;
+            const angle = Math.atan2(dy, dx);
+            
+            // Use the angle to project the blocks
+            const blockSpacing = 100; // Distance between path blocks
+            const numBlocks = 5;
+
+            for (let i = 1; i <= numBlocks; i++) {
+                // Calculate position along the projected line
+                const blockWorldX = startWorldX + Math.cos(angle) * (blockSpacing * i);
+                const blockWorldY = startWorldY + Math.sin(angle) * (blockSpacing * i);
+
+                const block = document.createElement('div');
+                block.className = 'path-visual-block';
+                block.style.backgroundColor = color;
+                block.style.left = `${blockWorldX}px`;
+                block.style.top = `${blockWorldY}px`;
+                
+                world.appendChild(block);
+                pathVisuals.push(block);
+            }
+        }
+
         // --- Core Path Functions ---
-        function startPath(pathName) {
+        function startPath(pathName, nodeElement) {
             let roomElement = document.getElementById('Room-' + pathName);
             if (!roomElement) {
                 console.error("Path not found:", pathName);
@@ -220,23 +278,23 @@
             pathActive = true;
             pathIndex = 0;
             pathNodes.forEach(node => node.classList.add('nodes-hidden'));
-            navArrow.style.opacity = 1;
+            
+            // Show the reticle when pathing starts
+            cameraReticle.style.opacity = 1;
+            
+            // Draw the path blocks
+            createPathVisuals(nodeElement, currentPath, nodeElement.getAttribute('data-color'));
 
-            // FIX: Set the target coordinate for the current step
-            // We DON'T move the canvas here, just set the guide's target
+            // Set the first coordinate target
             setTargetCoordinate(currentPath[pathIndex]); 
 
             resetGuide.textContent = "Align white circle with arrow to advance (Press E to reset)";
         }
 
-        // Calculates and sets the target coordinates in WORLD space for the current path step
+        // Sets the world coordinates the user must guide the camera to
         function setTargetCoordinate(coordinate) {
-            const viewportCenterX = window.innerWidth / 2;
-            const viewportCenterY = window.innerHeight / 2;
-
-            // This is the ideal translation needed to center the coordinate (x, y)
-            targetX = viewportCenterX - coordinate.x;
-            targetY = viewportCenterY - coordinate.y;
+            pathTargetWorldX = coordinate.x;
+            pathTargetWorldY = coordinate.y;
         }
         
         function resetPath() {
@@ -248,38 +306,44 @@
             instructionPopup.textContent = "Path Complete! Choose a new Node.";
             instructionPopup.classList.remove('hidden');
             
+            // Hide and remove path elements
+            cameraReticle.style.opacity = 0;
+            pathVisuals.forEach(el => el.remove());
+            pathVisuals = [];
+            
             // Re-center the world when resetting the path
             initializePosition();
-            targetX = currentX; // Stop any residual easing movement
+            
+            // Crucial: Stop residual movement
+            targetX = currentX;
             targetY = currentY;
 
             resetGuide.textContent = "Press E to reset path / Use WASD to explore";
         }
 
         // --- Event Listeners ---
-        // FIX: Consolidated node click listener
         pathNodes.forEach(node => {
             node.addEventListener('click', () => {
                 const pathName = node.getAttribute('data-path');
-                // Ensure we only start if we are not already on a path
                 if (!pathActive) {
-                    startPath(pathName);
+                    startPath(pathName, node);
                     hideInstructions(500); 
                 }
             });
         });
 
-        // 'E' Key Reset Listener
+        // 'E' Key Reset Listener (Unchanged)
         window.addEventListener('keydown', (e) => {
             if (e.code === 'KeyE') {
                 resetPath();
             }
         });
 
-        // WASD Key Down Listener (Controls acceleration)
+        // WASD Key Down/Up Listeners (Handle acceleration/deceleration)
+        const movementKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
+
         window.addEventListener('keydown', (e) => {
             if (movementKeys.includes(e.code)) {
-                // Acceleration logic applies in BOTH free roam and guided mode
                 if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
                 keyMap[e.code] = true;
                 e.preventDefault();
@@ -287,7 +351,6 @@
             }
         });
 
-        // WASD Key Up Listener (Controls deceleration and stop)
         window.addEventListener('keyup', (e) => {
             if (movementKeys.includes(e.code)) {
                 keyMap[e.code] = false;
@@ -328,7 +391,10 @@
             world.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
 
             positionNodesInCircle(); 
-            window.addEventListener('resize', initializePosition); // Re-center and reposition nodes on resize
+            window.addEventListener('resize', initializePosition);
+            
+            // Hide visuals initially
+            cameraReticle.style.opacity = 0;
         }
 
         function hideInstructions(delay = 4000) {
@@ -345,33 +411,33 @@
                 return;
             }
 
-            const currentTargetCoord = currentPath[pathIndex];
-            
-            // Calculate the current SCREEN position of the next path coordinate
-            const targetScreenX = currentX + currentTargetCoord.x;
-            const targetScreenY = currentY + currentTargetCoord.y;
+            // Calculate where the path target is on the CURRENT SCREEN
+            const targetScreenX = currentX + pathTargetWorldX;
+            const targetScreenY = currentY + pathTargetWorldY;
             
             const viewportCenterX = window.innerWidth / 2;
             const viewportCenterY = window.innerHeight / 2;
 
-            // Vector from viewport center (white circle) to target
+            // Vector from viewport center (white reticle) to path target
             const vecX = targetScreenX - viewportCenterX;
             const vecY = targetScreenY - viewportCenterY;
             
             const distance = Math.sqrt(vecX * vecX + vecY * vecY);
             
             if (distance < pathTolerance) {
-                // If close to center, advance to next step
+                // If the user has guided the white circle close enough to the target
                 pathIndex++;
                 if (pathIndex < currentPath.length) {
+                    // Advance to the next coordinate
                     setTargetCoordinate(currentPath[pathIndex]);
                 } else {
+                    // Path is complete
                     resetPath();
                     return;
                 }
             }
 
-            // Calculate rotation angle and distance to place the arrow guide
+            // Calculate rotation angle
             const angle = Math.atan2(vecY, vecX); 
             
             // Rotate the arrow icon to point toward the target
@@ -381,13 +447,14 @@
 
         // --- Animation Loop ---
         function animate() {
-            // 1. Update target based on WASD keys (free roam & guided)
+            // 1. Update target based on WASD keys
             if (Object.values(keyMap).some(v => v === true)) {
                 currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
             } else {
                 currentSpeed = baseSpeed; 
             }
             
+            // Apply key movement directly to the camera's TARGET position
             if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
             if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
             if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }

@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Interactive Canvas Portfolio</title>
     <style>
-        /* CSS from previous steps (omitted for brevity, but assumed to be present) */
-        body { overflow: hidden; margin: 0; padding: 0; background-color: #121212; font-family: Arial, sans-serif; color: #E0E0E0; }
+        /* CSS from previous steps */
+        body { 
+            overflow: hidden; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #121212; 
+            font-family: Arial, sans-serif; 
+            color: #E0E0E0;
+            /* HIDE THE DEFAULT CURSOR */
+            cursor: none; 
+        }
+
         #world { 
             position: absolute; 
             width: 5000px;      
@@ -18,9 +28,15 @@
                 repeating-linear-gradient(-90deg, #333 0, #333 1px, transparent 1px, transparent 100px);
             background-size: 100px 100px;
         }
-        .content-area, .room-content { position: absolute; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); }
         
-        /* Placeholder style for project images (from last step) */
+        .content-area, .room-content { 
+            position: absolute; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); 
+        }
+        
+        /* Placeholder style for project images */
         .project-placeholder {
             width: 600px;
             height: 400px;
@@ -40,12 +56,9 @@
 
         /* Room Styles */
         #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; color: #121212; }
-        #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; color: #121212; } /* Teal/Cyan */
+        #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; color: #121212; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; color: #121212; }
         
-        /* Info Panel Styles (unchanged) */
-        #info-panel { position: fixed; top: 20px; left: 20px; padding: 15px; background-color: rgba(0, 0, 0, 0.85); border: 1px solid #00A6FF; border-radius: 5px; z-index: 100; color: #f0f0f0; max-width: 300px; }
-
         /* Custom list style for Code Room */
         #Room-Code ul {
             list-style: square;
@@ -56,13 +69,6 @@
     </style>
 </head>
 <body>
-
-    <div id="info-panel">
-        <h3>🧭 Interactive Portfolio Guide</h3>
-        <p><strong>Use your mouse to explore the world. Stop moving your mouse to see the jelly effect!</strong></p>
-        <p>The main content is inside a massive, hidden `#world` canvas.</p>
-        <p>Current Canvas Size: 5000px x 5000px</p>
-    </div>
 
     <div id="world">
         <section id="Room-Design" class="room-content">
@@ -78,15 +84,12 @@
         <section id="Room-Code" class="room-content">
             <h2>💻 Code Room</h2>
             <p>Here you can find my **front-end development** projects, focusing on responsive layouts, JavaScript, and performance.</p>
-            
             <h3>Technical Projects</h3>
-
             <ul>
                 <li>**GitHub API Fetcher:** A tool to display repository activity and statistics.</li>
                 <li>**Interactive Data Visualization:** A project using D3.js to render complex data sets.</li>
                 <li>**AI-Generated Art Tool:** A fun front-end interface for controlling a generative art backend.</li>
             </ul>
-            
             <p>Coordinates: (3500px, 3500px)</p>
         </section>
 
@@ -96,22 +99,41 @@
 
     <script>
         const world = document.getElementById('world');
+        
+        // Target position (where the world *should* be)
         let targetX = 0;
         let targetY = 0;
+
+        // Current position and velocity (for spring physics)
         let currentX = 0;
         let currentY = 0;
         let velocityX = 0;
         let velocityY = 0;
         
+        // Spring Physics Constants
         const stiffness = 0.05; 
         const damping = 0.95;   
+        
+        // NEW: Sensitivity factor for mouse input (lower = less volatile/slower movement)
+        const sensitivity = 0.5; 
 
         window.addEventListener('mousemove', (e) => {
-            targetX = -e.clientX;
-            targetY = -e.clientY;
+            // Calculate the center of the viewport
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            
+            // Calculate the deviation of the mouse from the center
+            const deviationX = e.clientX - centerX;
+            const deviationY = e.clientY - centerY;
+            
+            // The world should move opposite to the deviation.
+            // We apply sensitivity to reduce the speed/volatility of movement.
+            targetX = -deviationX * sensitivity;
+            targetY = -deviationY * sensitivity;
         });
 
         function animate() {
+            // Spring Physics Logic (Unchanged)
             const dx = targetX - currentX;
             const dy = targetY - currentY;
 
@@ -127,11 +149,13 @@
             currentX += velocityX;
             currentY += velocityY;
 
+            // Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
             window.requestAnimationFrame(animate);
         }
 
+        // Start the animation loop
         animate();
     </script>
     

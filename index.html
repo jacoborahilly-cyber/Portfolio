@@ -27,14 +27,59 @@
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.7); 
             color: #121212;
         }
-        /* Room and indicator styles unchanged */
+        /* Room Styles */
         #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; }
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; }
-        #instruction-popup { /* ... styles ... */ }
+        
+        /* Instruction Panel CSS */
+        #instruction-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #121212;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-align: center;
+            opacity: 1;
+            transition: opacity 0.5s ease-out;
+        }
         .hidden { opacity: 0 !important; pointer-events: none; }
-        .indicator { /* ... styles ... */ }
+
+        /* --- UPDATED: Indicator CSS for clear arrow --- */
+        .indicator {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            opacity: 1;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            color: white;
+            line-height: 0; /* Ensures the triangle sits in the middle */
+            padding-top: 5px; /* Adjust triangle position */
+            /* Positioning is controlled by JS, these are safe defaults */
+            top: 50%;
+            left: 50%;
+        }
         .indicator.on-screen { opacity: 0; top: -100px; }
+        .indicator.off-screen { opacity: 1; }
+
+        /* Indicator Colors (unchanged) */
+        #indicator-design { background-color: #FF5A5F; }
+        #indicator-code { background-color: #1ABC9C; }
+        #indicator-about { background-color: #F39C12; }
     </style>
 </head>
 <body>
@@ -57,26 +102,25 @@
         const world = document.getElementById('world');
         const instructionPopup = document.getElementById('instruction-popup');
         
-        // Target/Current/Velocity for Spring Physics
+        // Target/Current/Velocity for Simple Easing
         let targetX = 0;
         let targetY = 0;
         let currentX = 0;
         let currentY = 0;
-        let velocityX = 0;
-        let velocityY = 0;
         
-        // --- UPDATED PHYSICS CONSTANTS ---
-        const stiffness = 0.02; // Reduced stiffness for less aggressive "jelly"
-        const damping = 0.98;   // Increased damping for a much slower, longer slide
+        // Removed velocityX/Y and spring constants (stiffness/damping)
+
+        // --- NEW SIMPLE EASING CONSTANT ---
+        const easing = 0.08; // How quickly the current position catches up to the target (0.08 = 8% per frame)
         
-        // --- NEW ACCELERATION VARIABLES ---
-        const baseSpeed = 0.5;      // Starting speed
-        const maxSpeed = 15;        // Maximum speed limit
-        const accelerationRate = 1.05; // Factor by which speed increases per frame
+        // --- ACCELERATION VARIABLES ---
+        const baseSpeed = 0.5;      
+        const maxSpeed = 15;        
+        const accelerationRate = 1.05; 
         let currentSpeed = baseSpeed;
 
         // Key movement variables
-        const keyMap = {}; 
+        const keyMap = {}; 
         
         const rooms = [
             { id: 'Room-Design', element: document.getElementById('Room-Design'), indicator: document.getElementById('indicator-design'), center: { x: 500 + 500, y: 500 + 350 } },
@@ -84,15 +128,12 @@
             { id: 'Room-About', element: document.getElementById('Room-About'), indicator: document.getElementById('indicator-about'), center: { x: 500 + 500, y: 2500 + 350 } }
         ];
 
-        // --- Keyboard Event Listeners ---
+        // --- Keyboard Event Listeners (Unchanged) ---
         const movementKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
 
         window.addEventListener('keydown', (e) => {
             if (movementKeys.includes(e.code)) {
-                if (!keyMap[e.code]) {
-                    // Reset speed on first key press to ensure slow start
-                    currentSpeed = baseSpeed; 
-                }
+                if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
                 keyMap[e.code] = true;
                 e.preventDefault();
                 hideInstructions();
@@ -103,7 +144,6 @@
             if (movementKeys.includes(e.code)) {
                 keyMap[e.code] = false;
             }
-            // Reset speed when all movement keys are released
             if (!Object.values(keyMap).some(v => v === true)) {
                  currentSpeed = baseSpeed;
             }
@@ -115,7 +155,7 @@
                 instructionPopup.classList.add('hidden');
             }
         }
-        setTimeout(hideInstructions, 4000); 
+        setTimeout(hideInstructions, 4000); 
 
         // --- Indicator Update Function (Unchanged) ---
         function updateIndicators() {
@@ -123,7 +163,7 @@
             const viewportH = window.innerHeight;
             const viewportCenterX = viewportW / 2;
             const viewportCenterY = viewportH / 2;
-            const indicatorSize = 40; 
+            const indicatorSize = 40; 
             
             rooms.forEach(room => {
                 const roomScreenX = currentX + room.center.x;
@@ -143,7 +183,7 @@
 
                     const vecX = roomScreenX - viewportCenterX;
                     const vecY = roomScreenY - viewportCenterY;
-                    const angle = Math.atan2(vecY, vecX); 
+                    const angle = Math.atan2(vecY, vecX); 
                     
                     let ix = viewportCenterX + Math.cos(angle) * viewportW;
                     let iy = viewportCenterY + Math.sin(angle) * viewportH;
@@ -154,53 +194,46 @@
                     
                     room.indicator.style.left = `${ix - indicatorSize / 2}px`;
                     room.indicator.style.top = `${iy - indicatorSize / 2}px`;
+                    
+                    // The triangle character is rotated to point towards the target
                     room.indicator.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
-                    room.indicator.textContent = '▲'; 
+                    room.indicator.textContent = '▲'; 
                 }
             });
         }
 
 
-        // --- 5. Animation Loop (Main Logic) ---
+        // --- 5. Animation Loop (New Deceleration Logic) ---
         function animate() {
             let isMoving = false;
 
-            // Check if any movement key is pressed
+            // 1. Check movement and apply Acceleration to Target Position
             if (Object.values(keyMap).some(v => v === true)) {
                 isMoving = true;
-                // Exponential acceleration: Increase speed up to max
                 currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
             } else {
-                // If not moving, ensure speed is back to base for next movement cycle
-                currentSpeed = baseSpeed; 
+                currentSpeed = baseSpeed; 
             }
 
-            // Apply movement based on key presses and CURRENT SPEED
+            // Apply movement to the TARGET (where we want to go)
             if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
             if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
             if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
             if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
-
-            // Spring Physics Logic 
+            
+            // 2. Linear Easing (Smooth Slide, No Bounce)
+            // Calculate the difference between the target and the current position
             const dx = targetX - currentX;
             const dy = targetY - currentY;
+            
+            // Move the current position a fraction of the distance (8%) towards the target
+            currentX += dx * easing;
+            currentY += dy * easing;
 
-            const springForceX = dx * stiffness;
-            const springForceY = dy * stiffness;
-
-            velocityX += springForceX;
-            velocityY += springForceY;
-
-            velocityX *= damping;
-            velocityY *= damping;
-
-            currentX += velocityX;
-            currentY += velocityY;
-
-            // Apply the new position
+            // 3. Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
-            updateIndicators(); 
+            updateIndicators(); 
 
             window.requestAnimationFrame(animate);
         }

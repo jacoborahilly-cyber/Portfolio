@@ -13,7 +13,7 @@
             background-color: #121212; 
             font-family: Arial, sans-serif; 
             color: #E0E0E0;
-            cursor: none; /* Hide default cursor */
+            /* FIX: Removed cursor: none; to make the default cursor visible for clicking nodes */
         }
 
         #world { 
@@ -44,23 +44,23 @@
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; }
         
-        /* --- UPDATED: Heart Cursor/Center Point (now a white circle) --- */
+        /* --- Heart Cursor/Center Point (White circle) --- */
         #heart-cursor {
             position: fixed;
             top: 50%;
             left: 50%;
-            width: 15px; /* Smaller, cleaner circle */
+            width: 15px; 
             height: 15px;
             margin-top: -7.5px;
             margin-left: -7.5px;
             border-radius: 50%;
-            background-color: white; /* White circle */
+            background-color: white; 
             z-index: 1000;
-            pointer-events: none;
+            /* pointer-events: none; is removed to allow the default cursor to interact */
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
         }
 
-        /* Navigational Arrow (Points from the heart) */
+        /* Navigational Arrow */
         #nav-arrow {
             position: fixed;
             top: 50%;
@@ -103,19 +103,18 @@
             opacity: 1;
             transition: transform 0.3s, opacity 0.5s;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            /* Transform removed here, positioning is now handled by JS for perfect circle */
         }
         .path-node:hover {
-            transform: scale(1.1); /* Only scale on hover */
+            transform: scale(1.1);
         }
 
-        /* Node Colors (positioning removed from CSS) */
-        #node-1 { background-color: #E74C3C; } /* Red */
-        #node-2 { background-color: #3498DB; } /* Blue */
-        #node-3 { background-color: #2ECC71; } /* Green */
-        #node-4 { background-color: #F1C40F; } /* Yellow */
-        #node-5 { background-color: #9B59B6; } /* Purple */
-        #node-6 { background-color: #E67E22; } /* Orange */
+        /* Node Colors */
+        #node-1 { background-color: #E74C3C; }
+        #node-2 { background-color: #3498DB; }
+        #node-3 { background-color: #2ECC71; }
+        #node-4 { background-color: #F1C40F; }
+        #node-5 { background-color: #9B59B6; }
+        #node-6 { background-color: #E67E22; }
 
         .nodes-hidden {
             opacity: 0 !important;
@@ -129,15 +128,16 @@
         Choose a **Node** to begin a guided path!
     </div>
     
-    <div id="heart-cursor"></div> <div id="nav-arrow">▲</div>
+    <div id="heart-cursor"></div> 
+    <div id="nav-arrow">▲</div>
     <div id="reset-guide">Press **E** to reset path / Use **WASD** to explore</div>
 
-    <div id="node-1" class="path-node" data-path="design">1</div>
-    <div id="node-2" class="path-node" data-path="code">2</div>
-    <div id="node-3" class="path-node" data-path="about">3</div>
-    <div id="node-4" class="path-node" data-path="empty1">4</div>
-    <div id="node-5" class="path-node" data-path="empty2">5</div>
-    <div id="node-6" class="path-node" data-path="empty3">6</div>
+    <div id="node-1" class="path-node" data-path="Design">1</div>
+    <div id="node-2" class="path-node" data-path="Code">2</div>
+    <div id="node-3" class="path-node" data-path="About">3</div>
+    <div id="node-4" class="path-node" data-path="Design">4</div>
+    <div id="node-5" class="path-node" data-path="Code">5</div>
+    <div id="node-6" class="path-node" data-path="About">6</div>
 
     <div id="indicator-design" class="indicator on-screen"></div>
     <div id="indicator-code" class="indicator on-screen"></div>
@@ -151,9 +151,31 @@
         <div id="spawn-center" style="position: absolute; top: 2500px; left: 2500px; width: 1px; height: 1px;"></div>
     </div>
     
-    <template id="room-design-template">...</template>
-    <template id="room-code-template">...</template>
-    <template id="room-about-template">...</template>
+    <template id="room-design-template">
+        <h2>🎨 Design Room</h2>
+        <p>This space is dedicated to my **UX/UI case studies**...</p>
+        <h3>Creative Design Showcase</h3>
+        <div class="project-placeholder">Project 1 Placeholder (600px x 400px)</div>
+        <div class="project-placeholder">Project 2 Placeholder (600px x 400px)</div>
+        <div style="clear: both;"></div>
+        <p>Coordinates: (500px, 500px)</p>
+    </template>
+    <template id="room-code-template">
+        <h2>💻 Code Room</h2>
+        <p>Here you can find my **front-end development** projects...</p>
+        <h3>Technical Projects</h3>
+        <ul>
+            <li>**GitHub API Fetcher:**...</li>
+            <li>**Interactive Data Visualization:**...</li>
+            <li>**AI-Generated Art Tool:**...</li>
+        </ul>
+        <p>Coordinates: (3500px, 3500px)</p>
+    </template>
+    <template id="room-about-template">
+        <h2>👤 About Room</h2>
+        <p>Learn more about **who I am**...</p>
+        <p>Coordinates: (2500px, 500px)</p>
+    </template>
 
     <script>
         const world = document.getElementById('world');
@@ -180,7 +202,7 @@
         
         // MOVEMENT CONSTANTS
         const easing = 0.08;
-        const guidedEasing = 0.05; // Slower/steadier move when guiding
+        const guidedEasing = 0.05;
         
         // Acceleration Variables (for exponential speed, used when free-roaming)
         const baseSpeed = 0.5;      
@@ -219,9 +241,9 @@
             pathIndex = 0;
             pathNodes.forEach(node => node.classList.add('nodes-hidden'));
             navArrow.style.opacity = 1;
-            setNextTarget();
 
-            // Update instructions
+            // Immediately set the first target and start movement
+            setNextTarget(); 
             resetGuide.textContent = "Press E to reset path";
         }
 
@@ -254,16 +276,23 @@
             // Re-center the world when resetting the path
             initializePosition();
 
-            // Update instructions
+            // FIX: Ensure target and current are aligned for a smooth restart
+            targetX = currentX;
+            targetY = currentY;
+
             resetGuide.textContent = "Press E to reset path / Use WASD to explore";
         }
 
         // --- Event Listeners ---
+        // FIX: Consolidated node click listener
         pathNodes.forEach(node => {
             node.addEventListener('click', () => {
                 const pathName = node.getAttribute('data-path');
-                startPath(pathName.replace('empty', 'Design')); // Simple mapping for empty nodes
-                hideInstructions(500); 
+                // Ensure we only start if we are not already on a path
+                if (!pathActive) {
+                    startPath(pathName);
+                    hideInstructions(500); 
+                }
             });
         });
 
@@ -274,47 +303,53 @@
             }
         });
 
-        // WASD Listener (Crucial fix for free-roam)
+        // WASD Key Down Listener (Controls acceleration in free-roam)
         window.addEventListener('keydown', (e) => {
             if (movementKeys.includes(e.code)) {
                 if (pathActive) {
-                    e.preventDefault(); // Lock movement during guide
+                    e.preventDefault(); 
                 } else {
-                    // FREE ROAM LOGIC (from previous smooth version)
+                    // FREE ROAM LOGIC
                     if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
                     keyMap[e.code] = true;
                     e.preventDefault();
-                    hideInstructions(500); // Hide initial instructions if user starts moving
+                    hideInstructions(500); 
                 }
             }
         });
 
+        // WASD Key Up Listener (Controls deceleration and stop)
         window.addEventListener('keyup', (e) => {
             if (movementKeys.includes(e.code)) {
                 keyMap[e.code] = false;
             }
-            if (!Object.values(keyMap).some(v => v === true)) { currentSpeed = baseSpeed; }
+            // FIX: Reset speed only if *all* movement keys are released
+            if (!Object.values(keyMap).some(v => v === true)) { 
+                currentSpeed = baseSpeed;
+            }
         });
 
         // --- Initialization and Utility ---
 
-        // NEW: Function to calculate and position nodes in a circle
+        // Function to calculate and position nodes in a circle
         function positionNodesInCircle() {
             const radius = 200; // Distance from center in pixels
             const centerX = window.innerWidth / 2;
             const centerY = window.innerHeight / 2;
-            const nodeDiameter = 70; // From CSS
+            const nodeDiameter = 70; 
 
             pathNodes.forEach((node, index) => {
-                const angle = (index / pathNodes.length) * 2 * Math.PI; // Calculate angle
+                const angle = (index / pathNodes.length) * 2 * Math.PI; 
                 
-                // Calculate position on the circle circumference
                 const x = centerX + radius * Math.cos(angle);
                 const y = centerY + radius * Math.sin(angle);
 
                 // Set CSS position, adjusting for the node's own size (70px)
                 node.style.left = `${x - nodeDiameter / 2}px`;
                 node.style.top = `${y - nodeDiameter / 2}px`;
+
+                // Set node transform separately for hover effect
+                node.style.transform = `translate(-50%, -50%)`;
             });
         }
 
@@ -329,6 +364,9 @@
 
             // 2. Position the selection nodes
             positionNodesInCircle(); 
+
+            // Add resize listener to reposition nodes if viewport changes
+            window.addEventListener('resize', positionNodesInCircle);
         }
 
         function hideInstructions(delay = 4000) {
@@ -347,7 +385,6 @@
 
             const currentTarget = currentPath[pathIndex];
             
-            // Calculate direction vector from heart center (viewport center) to target
             const targetScreenX = currentX + currentTarget.x;
             const targetScreenY = currentY + currentTarget.y;
             
@@ -360,6 +397,7 @@
             const distance = Math.sqrt(vecX * vecX + vecY * vecY);
             
             if (distance < pathTolerance) {
+                // Advance to next step
                 pathIndex++;
                 setNextTarget();
                 return;
@@ -375,7 +413,7 @@
             let dx, dy;
 
             if (pathActive) {
-                // GUIDED PATH MOVEMENT
+                // GUIDED PATH MOVEMENT (Uses guidedEasing)
                 dx = targetX - currentX;
                 dy = targetY - currentY;
                 currentX += dx * guidedEasing;
@@ -388,11 +426,14 @@
                 } else {
                     currentSpeed = baseSpeed; 
                 }
+                
+                // Update target based on held keys
                 if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
                 if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
                 if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
                 if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
                 
+                // Apply easing
                 dx = targetX - currentX;
                 dy = targetY - currentY;
                 currentX += dx * easing;
@@ -402,6 +443,7 @@
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
 
             updateArrow();
+            // Note: Indicators are currently unnecessary in this design
 
             window.requestAnimationFrame(animate);
         }

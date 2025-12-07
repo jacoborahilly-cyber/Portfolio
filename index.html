@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Interactive Canvas Portfolio</title>
+    <style>
+        /* CSS from previous steps (omitted for brevity, but assumed to be present) */
+        body { overflow: hidden; margin: 0; padding: 0; background-color: #121212; font-family: Arial, sans-serif; color: #E0E0E0; }
+        #world { 
+            position: absolute; 
+            width: 5000px;      
+            height: 5000px;     
+            top: 0; 
+            left: 0;
+            background: 
+                repeating-linear-gradient(0deg, #333 0, #333 1px, transparent 1px, transparent 100px),
+                repeating-linear-gradient(-90deg, #333 0, #333 1px, transparent 1px, transparent 100px);
+            background-size: 100px 100px;
+        }
+        .content-area, .room-content { position: absolute; padding: 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7); }
+        
+        /* Placeholder style for project images (from last step) */
+        .project-placeholder {
+            width: 600px;
+            height: 400px;
+            background-color: #555555; 
+            border: 2px dashed #121212;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #E0E0E0;
+            text-align: center;
+            float: left; 
+            margin-right: 30px;
+        }
+
+        /* Room Styles */
+        #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; color: #121212; }
+        #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; color: #121212; } /* Teal/Cyan */
+        #Room-About { top: 2500px; left: 500px; background-color: #F39C12; color: #121212; }
+        
+        /* Info Panel Styles (unchanged) */
+        #info-panel { position: fixed; top: 20px; left: 20px; padding: 15px; background-color: rgba(0, 0, 0, 0.85); border: 1px solid #00A6FF; border-radius: 5px; z-index: 100; color: #f0f0f0; max-width: 300px; }
+
+        /* Custom list style for Code Room */
+        #Room-Code ul {
+            list-style: square;
+            font-size: 1.1em;
+            padding-left: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="info-panel">
+        <h3>🧭 Interactive Portfolio Guide</h3>
+        <p><strong>Use your mouse to explore the world. Stop moving your mouse to see the jelly effect!</strong></p>
+        <p>The main content is inside a massive, hidden `#world` canvas.</p>
+        <p>Current Canvas Size: 5000px x 5000px</p>
+    </div>
+
+    <div id="world">
+        <section id="Room-Design" class="room-content">
+            <h2>🎨 Design Room</h2>
+            <p>This space is dedicated to my **UX/UI case studies**, branding projects, and visual design work.</p>
+            <h3>Creative Design Showcase</h3>
+            <div class="project-placeholder">Project 1 Placeholder (600px x 400px)</div>
+            <div class="project-placeholder">Project 2 Placeholder (600px x 400px)</div>
+            <div style="clear: both;"></div>
+            <p>Coordinates: (500px, 500px)</p>
+        </section>
+
+        <section id="Room-Code" class="room-content">
+            <h2>💻 Code Room</h2>
+            <p>Here you can find my **front-end development** projects, focusing on responsive layouts, JavaScript, and performance.</p>
+            
+            <h3>Technical Projects</h3>
+
+            <ul>
+                <li>**GitHub API Fetcher:** A tool to display repository activity and statistics.</li>
+                <li>**Interactive Data Visualization:** A project using D3.js to render complex data sets.</li>
+                <li>**AI-Generated Art Tool:** A fun front-end interface for controlling a generative art backend.</li>
+            </ul>
+            
+            <p>Coordinates: (3500px, 3500px)</p>
+        </section>
+
+        <section id="Room-About" class="room-content"><h2>👤 About Room</h2><p>Learn more about **who I am**, my skills, experience, and contact information.</p><p>Coordinates: (2500px, 500px)</p></section>
+
+    </div>
+
+    <script>
+        const world = document.getElementById('world');
+        let targetX = 0;
+        let targetY = 0;
+        let currentX = 0;
+        let currentY = 0;
+        let velocityX = 0;
+        let velocityY = 0;
+        
+        const stiffness = 0.05; 
+        const damping = 0.95;   
+
+        window.addEventListener('mousemove', (e) => {
+            targetX = -e.clientX;
+            targetY = -e.clientY;
+        });
+
+        function animate() {
+            const dx = targetX - currentX;
+            const dy = targetY - currentY;
+
+            const springForceX = dx * stiffness;
+            const springForceY = dy * stiffness;
+
+            velocityX += springForceX;
+            velocityY += springForceY;
+
+            velocityX *= damping;
+            velocityY *= damping;
+
+            currentX += velocityX;
+            currentY += velocityY;
+
+            world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
+
+            window.requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+    
+</body>
+</html>

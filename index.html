@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Interactive Canvas Portfolio</title>
+    <title>Walk-Through Portfolio</title>
     <style>
-        /* CSS from previous steps */
+        /* Base Setup */
         body { 
             overflow: hidden; 
             margin: 0; 
@@ -21,10 +21,12 @@
             height: 5000px;     
             top: 0; 
             left: 0;
-            background: 
-                repeating-linear-gradient(0deg, #333 0, #333 1px, transparent 1px, transparent 100px),
-                repeating-linear-gradient(-90deg, #333 0, #333 1px, transparent 1px, transparent 100px);
-            background-size: 100px 100px;
+            
+            /* --- UPDATED: Custom Image Background --- */
+            background-image: url('thinkiwassmart.jpg'); 
+            background-repeat: no-repeat;
+            background-size: 5000px 5000px;
+            background-position: top left;
         }
         
         .room-content { 
@@ -36,14 +38,22 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); 
             color: #121212;
             z-index: 3;
+            transition: opacity 1s;
         }
         
-        /* Room Styles (unchanged) */
+        /* Room Styles */
+        #Room-Spawn { top: 2000px; left: 2000px; background-color: #34495E; color: white; }
         #Room-Design { top: 500px; left: 500px; background-color: #FF5A5F; }
         #Room-Code { top: 3500px; left: 3500px; background-color: #1ABC9C; }
         #Room-About { top: 2500px; left: 500px; background-color: #F39C12; }
         
-        /* --- NEW/UPDATED: Camera Reticle (Movable Target Center) --- */
+        /* Hidden content when transitioning */
+        .content-hidden {
+            opacity: 0 !important;
+            pointer-events: none;
+        }
+
+        /* --- Camera Reticle (Fixed White circle) --- */
         #camera-reticle {
             position: fixed;
             top: 50%;
@@ -55,31 +65,82 @@
             border-radius: 50%;
             background-color: white; 
             z-index: 1000;
-            pointer-events: none; /* Must be transparent to clicks */
+            pointer-events: none; 
             box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
-            opacity: 0; /* Hidden initially, shown only when selecting a path */
-            transition: opacity 0.5s;
         }
 
-        /* Navigational Arrow */
-        #nav-arrow {
+        /* --- Door Styles within Spawn Room --- */
+        .door-visual {
+            position: absolute;
+            width: 100px;
+            height: 150px;
+            background-color: #7F8C8D;
+            border: 5px solid #2C3E50;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #2C3E50;
+            transition: transform 0.3s;
+        }
+        .door-visual:hover {
+            transform: scale(1.05);
+        }
+
+        /* --- Fixed Info Panel (For About Section) --- */
+        #info-panel-fixed {
             position: fixed;
             top: 50%;
-            left: 50%;
-            margin-top: -10px; 
-            margin-left: -10px;
-            z-index: 1001;
-            font-size: 2em;
-            color: #00A6FF;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            opacity: 0; 
+            right: 0;
+            transform: translateY(-50%);
+            width: 300px;
+            height: 80vh;
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #121212;
+            border-left: 5px solid #F39C12;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            padding: 20px;
+            overflow-y: auto;
+            right: -305px; 
+            transition: right 0.4s ease-out;
+        }
+        #info-panel-fixed.open {
+            right: 0;
+        }
+        #info-panel-fixed button {
+            float: right;
+            border: none;
+            background: none;
+            font-size: 1.5em;
+            cursor: pointer;
         }
 
-        /* Reset Instructions in Bottom Left (unchanged) */
-        #reset-guide {
+        /* --- Interactive Objects in About Room --- */
+        .interactive-object {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-color: #E74C3C;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+        .interactive-object:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- Fixed Instructions (unchanged) --- */
+        #instructions-fixed {
             position: fixed;
-            bottom: 20px;
+            top: 20px;
             left: 20px;
             padding: 10px 15px;
             background-color: rgba(0, 0, 0, 0.7);
@@ -87,267 +148,278 @@
             border-radius: 5px;
             z-index: 1002;
             font-size: 1.1em;
-            opacity: 0.8;
         }
-
-        /* Floating Path Nodes */
-        .path-node {
-            position: fixed;
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 999;
-            opacity: 1;
-            transition: transform 0.3s, opacity 0.5s;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-        }
-        .path-node:hover {
-            transform: scale(1.1);
-        }
-
-        /* Node Colors */
-        #node-1 { background-color: #E74C3C; }
-        #node-2 { background-color: #3498DB; }
-        #node-3 { background-color: #2ECC71; }
-        #node-4 { background-color: #F1C40F; }
-        #node-5 { background-color: #9B59B6; }
-        #node-6 { background-color: #E67E22; }
-
-        .nodes-hidden {
-            opacity: 0 !important;
-            pointer-events: none;
-        }
-
-        /* --- NEW: Path Visual Block CSS --- */
-        .path-visual-block {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-            z-index: 2; /* Below content, above grid */
-            opacity: 0.8;
-            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
-        }
+        
     </style>
 </head>
 <body>
 
-    <div id="instruction-popup">
-        Choose a **Node** to begin a guided path!
+    <div id="instructions-fixed">
+        Use **WASD** to walk through a door and begin an experience!
     </div>
     
     <div id="camera-reticle"></div> 
-    <div id="nav-arrow">▲</div>
-    <div id="reset-guide">Press **E** to reset path / Use **WASD** to explore</div>
 
-    <div id="node-1" class="path-node" data-path="Design" data-color="#E74C3C">1</div>
-    <div id="node-2" class="path-node" data-path="Code" data-color="#3498DB">2</div>
-    <div id="node-3" class="path-node" data-path="About" data-color="#2ECC71">3</div>
-    <div id="node-4" class="path-node" data-path="Design" data-color="#F1C40F">4</div>
-    <div id="node-5" class="path-node" data-path="Code" data-color="#9B59B6">5</div>
-    <div id="node-6" class="path-node" data-path="About" data-color="#E67E22">6</div>
-
-    <div id="indicator-design" class="indicator on-screen"></div>
-    <div id="indicator-code" class="indicator on-screen"></div>
-    <div id="indicator-about" class="indicator on-screen"></div>
-
+    <div id="info-panel-fixed">
+        <button id="close-info-panel" onclick="document.getElementById('info-panel-fixed').classList.remove('open');">&times;</button>
+        <h3 id="panel-title"></h3>
+        <div id="panel-content"></div>
+    </div>
+    
     <div id="world">
-        <section id="Room-Design" class="room-content" data-path-steps="2000,1000|1000,500|500,1500"></section>
-        <section id="Room-Code" class="room-content" data-path-steps="4000,4000|3000,3500|3500,2500"></section>
-        <section id="Room-About" class="room-content" data-path-steps="2500,100|1500,2000|500,2500"></section>
+        <section id="Room-Spawn" class="room-content" data-room-id="Spawn"></section>
+        
+        <section id="Room-Design" class="room-content content-hidden" data-template="room-design-template" data-room-id="Design"></section>
+        <section id="Room-Code" class="room-content content-hidden" data-template="room-code-template" data-room-id="Code"></section>
+        <section id="Room-About" class="room-content content-hidden" data-template="room-about-template" data-room-id="About"></section>
 
         <div id="spawn-center" style="position: absolute; top: 2500px; left: 2500px; width: 1px; height: 1px;"></div>
     </div>
     
-    <template id="room-design-template">...</template>
-    <template id="room-code-template">...</template>
-    <template id="room-about-template">
-        <h2>👤 About Room</h2>
-        <p>Learn more about **who I am**...</p>
-        <p>Coordinates: (2500px, 500px)</p>
+    <template id="room-spawn-template">
+        <h2>🏠 Welcome to the Hub!</h2>
+        <p>Walk toward any of the doors to enter a portfolio section.</p>
+
+        <div class="door-visual" data-target-room="Design" data-hallway-x="1000" data-hallway-y="850" 
+             style="top: 0px; left: 450px;">DESIGN</div>
+
+        <div class="door-visual" data-target-room="Code" data-hallway-x="4000" data-hallway-y="3850" 
+             style="bottom: 0px; left: 450px;">CODE</div>
+        
+        <div class="door-visual" data-target-room="About" data-hallway-x="1000" data-hallway-y="2850" 
+             style="top: 275px; left: 0px;">ABOUT</div>
+
+        <div class="door-visual" data-target-room="empty1" data-hallway-x="3000" data-hallway-y="1000" 
+             style="top: 275px; right: 0px;">ART</div>
+             
     </template>
+    
+    <template id="room-design-template">
+        <h2>🎨 Design Hallway</h2>
+        <p>You walked through the door! Walk back toward the center to return to the Hub.</p>
+    </template>
+    <template id="room-code-template">
+        <h2>💻 Code Hallway</h2>
+        <p>Walk back to the center of this room to return to the Hub.</p>
+    </template>
+    
+    <template id="room-about-template">
+        <h2>👤 About Me</h2>
+        <p>Explore the floating objects to learn more about my skills, tools, and background.</p>
+
+        <div class="interactive-object" data-title="My Experience" data-content="I have 5 years of experience in product design and front-end development." style="top: 150px; left: 100px;">💼</div>
+        <div class="interactive-object" data-title="Tool: Figma" data-content="Figma is my primary tool for high-fidelity prototyping and UI/UX design." style="top: 400px; left: 250px;">📐</div>
+        <div class="interactive-object" data-title="Skill: JavaScript" data-content="I specialize in ES6+, React, and animated interactions using modern APIs." style="top: 250px; left: 500px;">💻</div>
+        <div class="interactive-object" data-title="Contact" data-content="Email me at: contact@example.com" style="top: 550px; left: 700px;">📧</div>
+        <div class="interactive-object" data-title="Future Goals" data-content="I plan to transition into a full-stack role focusing on scalable server architecture." style="top: 300px; left: 300px;">🚀</div>
+        
+        <div style="position: absolute; bottom: 30px; left: 50px; background-color: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; color: white;">
+            Press **E** to return to the Hub
+        </div>
+    </template>
+
 
     <script>
         const world = document.getElementById('world');
-        const instructionPopup = document.getElementById('instruction-popup');
-        const navArrow = document.getElementById('nav-arrow');
-        const pathNodes = document.querySelectorAll('.path-node');
-        const resetGuide = document.getElementById('reset-guide');
-        const cameraReticle = document.getElementById('camera-reticle'); // New reticle element
-
-        // World Dimensions
+        const roomContent = document.querySelectorAll('.room-content');
+        const infoPanel = document.getElementById('info-panel-fixed');
+        const panelTitle = document.getElementById('panel-title');
+        const panelContent = document.getElementById('panel-content');
+        
         const WORLD_SIZE = 5000;
-        const HALF_WORLD = WORLD_SIZE / 2;
-
-        // Path State Management
-        let pathActive = false;
-        let currentPath = [];
-        let pathIndex = 0;
-        const pathTolerance = 100; 
+        const ROOM_WIDTH = 1000;
+        const ROOM_HEIGHT = 700;
+        const DOOR_WIDTH = 100;
+        const DOOR_HEIGHT = 150;
 
         // Camera Position Variables
-        let targetX = 0; // Where the camera is being EASED to (controlled by WASD)
+        let targetX = 0; 
         let targetY = 0;
-        let currentX = 0; // Current position of the camera
+        let currentX = 0;
         let currentY = 0;
-        
-        // Path Target (The world coordinate the user needs to aim their reticle at)
-        let pathTargetWorldX = 0;
-        let pathTargetWorldY = 0;
-        
-        // MOVEMENT CONSTANTS
-        const easing = 0.08;
+        const easing = 0.08; 
+
+        // Current State
+        let currentRoomId = 'Spawn'; 
+        const SPAWN_ROOM_WORLD_X = 2000;
+        const SPAWN_ROOM_WORLD_Y = 2000;
+        const SPAWN_COORD = { x: SPAWN_ROOM_WORLD_X + ROOM_WIDTH / 2, y: SPAWN_ROOM_WORLD_Y + ROOM_HEIGHT / 2 }; // Center of spawn room in World Space
+        let isTransitioning = false;
+
+        // WASD Movement
         const baseSpeed = 0.5;      
         const maxSpeed = 15;        
         const accelerationRate = 1.05; 
         let currentSpeed = baseSpeed;
-
-        // Key movement variables
-        const keyMap = {}; 
-        
-        // Room Data (Unchanged)
-        const rooms = [
-            { id: 'Room-Design', element: document.getElementById('Room-Design'), indicator: document.getElementById('indicator-design'), center: { x: 1000, y: 850 } },
-            { id: 'Room-Code', element: document.getElementById('Room-Code'), indicator: document.getElementById('indicator-code'), center: { x: 4000, y: 3850 } },
-            { id: 'Room-About', element: document.getElementById('Room-About'), indicator: document.getElementById('indicator-about'), center: { x: 1000, y: 2850 } }
-        ];
-
-        // Stores references to the path visual blocks
-        let pathVisuals = []; 
-
-        // --- NEW: Path Visualization Function ---
-        function createPathVisuals(nodeElement, steps, color) {
-            // Clean up old blocks
-            pathVisuals.forEach(el => el.remove());
-            pathVisuals = [];
-
-            if (!steps || steps.length === 0) return;
-
-            // Start position is the current camera center in world space
-            const worldCenterOffset = { x: HALF_WORLD, y: HALF_WORLD };
-            const startWorldX = worldCenterOffset.x;
-            const startWorldY = worldCenterOffset.y;
-            
-            // Initial vector direction from spawn (2500, 2500) to the first step
-            const startStep = steps[0];
-            const dx = startStep.x - startWorldX;
-            const dy = startStep.y - startWorldY;
-            const angle = Math.atan2(dy, dx);
-            
-            // Use the angle to project the blocks
-            const blockSpacing = 100; // Distance between path blocks
-            const numBlocks = 5;
-
-            for (let i = 1; i <= numBlocks; i++) {
-                // Calculate position along the projected line
-                const blockWorldX = startWorldX + Math.cos(angle) * (blockSpacing * i);
-                const blockWorldY = startWorldY + Math.sin(angle) * (blockSpacing * i);
-
-                const block = document.createElement('div');
-                block.className = 'path-visual-block';
-                block.style.backgroundColor = color;
-                block.style.left = `${blockWorldX}px`;
-                block.style.top = `${blockWorldY}px`;
-                
-                world.appendChild(block);
-                pathVisuals.push(block);
-            }
-        }
-
-        // --- Core Path Functions ---
-        function startPath(pathName, nodeElement) {
-            let roomElement = document.getElementById('Room-' + pathName);
-            if (!roomElement) {
-                console.error("Path not found:", pathName);
-                return;
-            }
-            const stepsString = roomElement.getAttribute('data-path-steps');
-            if (!stepsString) return;
-
-            currentPath = stepsString.split('|').map(step => {
-                const [x, y] = step.split(',').map(Number);
-                return { x, y };
-            });
-
-            if (currentPath.length === 0) return;
-
-            pathActive = true;
-            pathIndex = 0;
-            pathNodes.forEach(node => node.classList.add('nodes-hidden'));
-            
-            // Show the reticle when pathing starts
-            cameraReticle.style.opacity = 1;
-            
-            // Draw the path blocks
-            createPathVisuals(nodeElement, currentPath, nodeElement.getAttribute('data-color'));
-
-            // Set the first coordinate target
-            setTargetCoordinate(currentPath[pathIndex]); 
-
-            resetGuide.textContent = "Align white circle with arrow to advance (Press E to reset)";
-        }
-
-        // Sets the world coordinates the user must guide the camera to
-        function setTargetCoordinate(coordinate) {
-            pathTargetWorldX = coordinate.x;
-            pathTargetWorldY = coordinate.y;
-        }
-        
-        function resetPath() {
-            pathActive = false;
-            currentPath = [];
-            pathIndex = 0;
-            navArrow.style.opacity = 0;
-            pathNodes.forEach(node => node.classList.remove('nodes-hidden'));
-            instructionPopup.textContent = "Path Complete! Choose a new Node.";
-            instructionPopup.classList.remove('hidden');
-            
-            // Hide and remove path elements
-            cameraReticle.style.opacity = 0;
-            pathVisuals.forEach(el => el.remove());
-            pathVisuals = [];
-            
-            // Re-center the world when resetting the path
-            initializePosition();
-            
-            // Crucial: Stop residual movement
-            targetX = currentX;
-            targetY = currentY;
-
-            resetGuide.textContent = "Press E to reset path / Use WASD to explore";
-        }
-
-        // --- Event Listeners ---
-        pathNodes.forEach(node => {
-            node.addEventListener('click', () => {
-                const pathName = node.getAttribute('data-path');
-                if (!pathActive) {
-                    startPath(pathName, node);
-                    hideInstructions(500); 
-                }
-            });
-        });
-
-        // 'E' Key Reset Listener (Unchanged)
-        window.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyE') {
-                resetPath();
-            }
-        });
-
-        // WASD Key Down/Up Listeners (Handle acceleration/deceleration)
+        const keyMap = {};
         const movementKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight'];
 
+        // --- Core Scene Management ---
+
+        function loadRoomTemplates() {
+            // Load Spawn and Hallway templates
+            const spawnSection = document.getElementById('Room-Spawn');
+            if (spawnSection.children.length === 0) {
+                 const template = document.getElementById('room-spawn-template');
+                 const clone = document.importNode(template.content, true);
+                 spawnSection.appendChild(clone);
+            }
+            document.querySelectorAll('section[data-template]').forEach(roomElement => {
+                const templateId = roomElement.getAttribute('data-template');
+                const template = document.getElementById(templateId);
+                if (template && roomElement.children.length === 0) {
+                    const clone = document.importNode(template.content, true);
+                    roomElement.appendChild(clone);
+                }
+            });
+            // Attach specific listeners after templates are loaded
+            attachAboutListeners();
+        }
+
+        function setRoomVisibility(targetId) {
+            // Hide info panel when changing rooms
+            infoPanel.classList.remove('open');
+
+            roomContent.forEach(room => {
+                if (room.id === 'Room-' + targetId) {
+                    room.classList.remove('content-hidden');
+                } else {
+                    room.classList.add('content-hidden');
+                }
+            });
+        }
+
+        function goToScene(targetSceneId, targetWorldX, targetWorldY) {
+            if (isTransitioning) return;
+            isTransitioning = true;
+
+            // 1. Calculate the new target camera position (translation)
+            const viewportCenterX = window.innerWidth / 2;
+            const viewportCenterY = window.innerHeight / 2;
+            
+            targetX = viewportCenterX - targetWorldX;
+            targetY = viewportCenterY - targetWorldY;
+
+            // 2. Hide content before moving
+            document.getElementById('Room-' + currentRoomId).classList.add('content-hidden');
+
+            // 3. Update current room state
+            currentRoomId = targetSceneId;
+
+            // 4. Show the new room content after transition has mostly completed
+            setTimeout(() => {
+                setRoomVisibility(targetSceneId);
+                // Allow movement after a short delay
+                setTimeout(() => { isTransitioning = false; }, 500);
+            }, 1000); 
+        }
+
+        // --- About Room Interactions ---
+        function handleObjectHover(e) {
+            // Only show panel if in the About room
+            if (currentRoomId === 'About') {
+                panelTitle.textContent = e.currentTarget.getAttribute('data-title');
+                panelContent.innerHTML = `<p>${e.currentTarget.getAttribute('data-content')}</p>`;
+                infoPanel.classList.add('open');
+            }
+        }
+        
+        function attachAboutListeners() {
+            const aboutRoom = document.getElementById('Room-About');
+            if (aboutRoom) {
+                const objects = aboutRoom.querySelectorAll('.interactive-object');
+                objects.forEach(obj => {
+                    obj.addEventListener('mouseover', handleObjectHover);
+                });
+            }
+        }
+
+
+        // --- Collision Detection ---
+        function checkCollisions() {
+            if (isTransitioning) return;
+
+            // Calculate the current world coordinate of the *center of the viewport*
+            const cameraWorldX = (window.innerWidth / 2) - currentX;
+            const cameraWorldY = (window.innerHeight / 2) - currentY;
+            
+            const RETURN_DOOR_RADIUS = 200; 
+
+            if (currentRoomId === 'Spawn') {
+                // Logic: Check if the camera has walked into any of the doors in the Spawn Room
+
+                const spawnRoomElement = document.getElementById('Room-Spawn');
+                const doorVisuals = spawnRoomElement.querySelectorAll('.door-visual');
+
+                doorVisuals.forEach(door => {
+                    const targetRoom = door.getAttribute('data-target-room');
+                    const hallwayX = parseInt(door.getAttribute('data-hallway-x'));
+                    const hallwayY = parseInt(door.getAttribute('data-hallway-y'));
+                    
+                    // Door position relative to the Spawn Room corner (2000, 2000)
+                    let doorLeft = parseFloat(door.style.left || 0);
+                    let doorTop = parseFloat(door.style.top || 0);
+                    let doorRight = parseFloat(door.style.right || 0);
+                    let doorBottom = parseFloat(door.style.bottom || 0);
+                    
+                    let doorWorldCenterX, doorWorldCenterY;
+
+                    // Calculate World X Center
+                    if (door.style.right) {
+                         doorWorldCenterX = SPAWN_ROOM_WORLD_X + ROOM_WIDTH - doorRight - DOOR_WIDTH / 2;
+                    } else { 
+                         doorWorldCenterX = SPAWN_ROOM_WORLD_X + doorLeft + DOOR_WIDTH / 2;
+                    }
+
+                    // Calculate World Y Center
+                    if (door.style.bottom) {
+                         doorWorldCenterY = SPAWN_ROOM_WORLD_Y + ROOM_HEIGHT - doorBottom - DOOR_HEIGHT / 2;
+                    } else { 
+                         doorWorldCenterY = SPAWN_ROOM_WORLD_Y + doorTop + DOOR_HEIGHT / 2;
+                    }
+
+                    const DOOR_COLLISION_RADIUS = 75; 
+                    const distanceToDoor = Math.sqrt(
+                        Math.pow(cameraWorldX - doorWorldCenterX, 2) + 
+                        Math.pow(cameraWorldY - doorWorldCenterY, 2)
+                    );
+                    
+                    if (distanceToDoor < DOOR_COLLISION_RADIUS) {
+                        goToScene(targetRoom, hallwayX, hallwayY);
+                    }
+                });
+
+            } else {
+                // Logic: Check if the camera has walked back to the return door trigger in the hallway
+                
+                const currentRoomElement = document.getElementById('Room-' + currentRoomId);
+                const roomX = parseInt(currentRoomElement.style.left) + ROOM_WIDTH / 2; // Hallway Center X
+                const roomY = parseInt(currentRoomElement.style.top) + ROOM_HEIGHT / 2; // Hallway Center Y
+                
+                const distanceToReturn = Math.sqrt(
+                    Math.pow(cameraWorldX - roomX, 2) + 
+                    Math.pow(cameraWorldY - roomY, 2)
+                );
+                
+                if (distanceToReturn < RETURN_DOOR_RADIUS) {
+                    // Walked back to the center trigger point
+                    goToScene('Spawn', SPAWN_COORD.x, SPAWN_COORD.y);
+                }
+            }
+        }
+
+        // --- Global Event Listeners (E key for fast return) ---
         window.addEventListener('keydown', (e) => {
+            // WASD Movement
             if (movementKeys.includes(e.code)) {
                 if (!keyMap[e.code]) { currentSpeed = baseSpeed; }
                 keyMap[e.code] = true;
                 e.preventDefault();
-                hideInstructions(500); 
+            }
+            
+            // E key fast return trigger
+            if (e.code === 'KeyE' && currentRoomId !== 'Spawn') {
+                 goToScene('Spawn', SPAWN_COORD.x, SPAWN_COORD.y);
             }
         });
 
@@ -360,105 +432,38 @@
             }
         });
 
-        // --- Initialization and Utility ---
-
-        function positionNodesInCircle() {
-            const radius = 200; 
-            const centerX = window.innerWidth / 2;
-            const centerY = window.innerHeight / 2;
-            const nodeDiameter = 70; 
-
-            pathNodes.forEach((node, index) => {
-                const angle = (index / pathNodes.length) * 2 * Math.PI; 
-                
-                const x = centerX + radius * Math.cos(angle);
-                const y = centerY + radius * Math.sin(angle);
-
-                node.style.left = `${x - nodeDiameter / 2}px`;
-                node.style.top = `${y - nodeDiameter / 2}px`;
-
-                node.style.transform = `translate(-50%, -50%)`;
-            });
-        }
-
+        // --- Initialization and Animation ---
+        
         function initializePosition() {
             loadRoomTemplates();
-            
+
             const viewportCenterX = window.innerWidth / 2;
             const viewportCenterY = window.innerHeight / 2;
-            currentX = targetX = viewportCenterX - HALF_WORLD;
-            currentY = targetY = viewportCenterY - HALF_WORLD;
+            
+            // Initial position centers the 2500, 2350 point of the world (Spawn Room Center)
+            currentX = targetX = viewportCenterX - SPAWN_COORD.x;
+            currentY = targetY = viewportCenterY - SPAWN_COORD.y;
             world.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
 
-            positionNodesInCircle(); 
+            // Ensure only the spawn room is visible initially
+            setRoomVisibility('Spawn');
             window.addEventListener('resize', initializePosition);
-            
-            // Hide visuals initially
-            cameraReticle.style.opacity = 0;
         }
 
-        function hideInstructions(delay = 4000) {
-            setTimeout(() => {
-                if (!instructionPopup.classList.contains('hidden')) {
-                    instructionPopup.classList.add('hidden');
-                }
-            }, delay);
-        }
-
-        function updateArrow() {
-            if (!pathActive) {
-                navArrow.style.opacity = 0;
-                return;
-            }
-
-            // Calculate where the path target is on the CURRENT SCREEN
-            const targetScreenX = currentX + pathTargetWorldX;
-            const targetScreenY = currentY + pathTargetWorldY;
-            
-            const viewportCenterX = window.innerWidth / 2;
-            const viewportCenterY = window.innerHeight / 2;
-
-            // Vector from viewport center (white reticle) to path target
-            const vecX = targetScreenX - viewportCenterX;
-            const vecY = targetScreenY - viewportCenterY;
-            
-            const distance = Math.sqrt(vecX * vecX + vecY * vecY);
-            
-            if (distance < pathTolerance) {
-                // If the user has guided the white circle close enough to the target
-                pathIndex++;
-                if (pathIndex < currentPath.length) {
-                    // Advance to the next coordinate
-                    setTargetCoordinate(currentPath[pathIndex]);
-                } else {
-                    // Path is complete
-                    resetPath();
-                    return;
-                }
-            }
-
-            // Calculate rotation angle
-            const angle = Math.atan2(vecY, vecX); 
-            
-            // Rotate the arrow icon to point toward the target
-            navArrow.style.transform = `rotate(${angle + Math.PI / 2}rad) translate(0, -50px)`;
-            navArrow.style.opacity = 1;
-        }
-
-        // --- Animation Loop ---
         function animate() {
             // 1. Update target based on WASD keys
-            if (Object.values(keyMap).some(v => v === true)) {
-                currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
-            } else {
-                currentSpeed = baseSpeed; 
+            if (!isTransitioning) {
+                if (Object.values(keyMap).some(v => v === true)) {
+                    currentSpeed = Math.min(maxSpeed, currentSpeed * accelerationRate);
+                } else {
+                    currentSpeed = baseSpeed;
+                }
+                
+                if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
+                if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
+                if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
+                if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
             }
-            
-            // Apply key movement directly to the camera's TARGET position
-            if (keyMap['KeyA'] || keyMap['ArrowLeft']) { targetX += currentSpeed; }
-            if (keyMap['KeyD'] || keyMap['ArrowRight']) { targetX -= currentSpeed; }
-            if (keyMap['KeyW'] || keyMap['ArrowUp']) { targetY += currentSpeed; }
-            if (keyMap['KeyS'] || keyMap['ArrowDown']) { targetY -= currentSpeed; }
             
             // 2. Apply Easing
             const dx = targetX - currentX;
@@ -469,28 +474,16 @@
 
             // 3. Apply the new position
             world.style.transform = `translate3d(${Math.round(currentX)}px, ${Math.round(currentY)}px, 0)`;
-
-            updateArrow();
+            
+            // 4. Check for room transitions
+            checkCollisions();
 
             window.requestAnimationFrame(animate);
-        }
-
-        // Load Templates (Function definition kept short)
-        function loadRoomTemplates() {
-            document.querySelectorAll('[data-template]').forEach(roomElement => {
-                const templateId = roomElement.getAttribute('data-template');
-                const template = document.getElementById(templateId);
-                if (template && roomElement) {
-                    const clone = document.importNode(template.content, true);
-                    roomElement.appendChild(clone);
-                }
-            });
         }
 
         // --- Start Execution ---
         window.onload = initializePosition;
         animate();
-        hideInstructions(); 
     </script>
     
 </body>
